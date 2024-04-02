@@ -91,11 +91,67 @@ static void __faasm_push_state_wrapper(wasm_exec_env_t exec_env, char* key)
     kv->pushFull();
 }
 
+/**
+ * Read state for the given key into the buffer provided.
+ *
+ * Returns size of the state if buffer length is zero.
+ */
+static int32_t __faasm_read_function_state_wrapper(wasm_exec_env_t exec_env,
+                                                   char* buffer,
+                                                   int32_t bufferLen)
+{
+    // If buffer is nullptr, flag is true
+    std::string user = ExecutorContext::get()->getMsg().user();
+    std::string func = ExecutorContext::get()->getMsg().function();
+    int32_t parallelismId = ExecutorContext::get()->getMsg().parallelismid();
+    SPDLOG_DEBUG("S - faasm_read_function_state {} parallelism {} <len> {}",
+                 func,
+                 parallelismId,
+                 bufferLen);
+    if (bufferLen == 0) {
+        // If buffer len is zero, just need to get the state size
+        SPDLOG_DEBUG("S - faasm_read_function_state get the state size");
+        faabric::state::State& state = faabric::state::getGlobalState();
+        return (int32_t)state.getFunctionStateSize(user, func, parallelismId);
+    } else {
+        auto fs = faabric::state::getGlobalState().getFS(
+          user, func, parallelismId, bufferLen);
+        fs->get(reinterpret_cast<uint8_t*>(buffer));
+        return fs->size();
+    }
+
+    return 0;
+}
+
+/**
+ * Writes the given data buffer to the function state referenced by the given
+ * key.
+ */
+static void __faasm_write_function_state_wrapper(wasm_exec_env_t exec_env,
+                                                 char* buffer,
+                                                 int32_t bufferLen)
+{
+    std::string user = ExecutorContext::get()->getMsg().user();
+    std::string func = ExecutorContext::get()->getMsg().function();
+    int32_t parallelismId = ExecutorContext::get()->getMsg().parallelismid();
+    // SPGLOG_DEBUG the parallelismId
+    SPDLOG_DEBUG("S - faasm_write_function_state - {} parallelism {}",
+                 func,
+                 parallelismId);
+
+    auto fs = faabric::state::getGlobalState().getFS(
+      user, func, parallelismId, bufferLen);
+
+    fs->set(reinterpret_cast<uint8_t*>(buffer), bufferLen);
+}
+
 static NativeSymbol ns[] = {
     REG_NATIVE_FUNC(__faasm_read_state, "($$i)i"),
     REG_NATIVE_FUNC(__faasm_read_state_ptr, "($i)i"),
     REG_NATIVE_FUNC(__faasm_write_state, "($$i)"),
     REG_NATIVE_FUNC(__faasm_push_state, "($)"),
+    REG_NATIVE_FUNC(__faasm_read_function_state, "($i)i"),
+    REG_NATIVE_FUNC(__faasm_write_function_state, "($i)"),
 };
 
 uint32_t getFaasmStateApi(NativeSymbol** nativeSymbols)
