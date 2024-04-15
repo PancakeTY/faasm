@@ -114,6 +114,11 @@ class WasmModule
       long offset,
       uint32_t length);
 
+    virtual uint32_t mapSharedFuncStateMemory(
+      const std::shared_ptr<faabric::state::FunctionState>& fs,
+      long offset,
+      uint32_t length);
+
     virtual uint8_t* wasmPointerToNative(uint32_t wasmPtr);
 
     virtual size_t getMemorySizeBytes();

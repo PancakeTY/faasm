@@ -58,6 +58,12 @@
                     "ignoreFailures": true
                 }
             ],
+            "environment": [
+                {
+                    "name": "LOG_LEVEL",
+                    "value": "trace"
+                }
+            ]
         }
     ]
 }

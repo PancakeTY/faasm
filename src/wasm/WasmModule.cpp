@@ -2,6 +2,7 @@
 #include <faabric/executor/ExecutorContext.h>
 #include <faabric/planner/PlannerClient.h>
 #include <faabric/proto/faabric.pb.h>
+#include <faabric/redis/Redis.h>
 #include <faabric/scheduler/Scheduler.h>
 #include <faabric/snapshot/SnapshotRegistry.h>
 #include <faabric/util/batch.h>
@@ -347,6 +348,54 @@ uint32_t WasmModule::mapSharedStateMemory(
             // Map the shared memory
             uint8_t* wasmMemoryRegionPtr = wasmPointerToNative(wasmBasePtr);
             kv->mapSharedMemory(static_cast<void*>(wasmMemoryRegionPtr),
+                                chunk.nPagesOffset,
+                                chunk.nPagesLength);
+
+            // Cache the wasm pointer
+            sharedMemWasmPtrs[segmentKey] = wasmOffsetPtr;
+        }
+    }
+
+    // Return the wasm pointer
+    {
+        faabric::util::SharedLock lock(sharedMemWasmPtrsMutex);
+        return sharedMemWasmPtrs[segmentKey];
+    }
+}
+
+/**
+ * Should same as mapSharedStateMemory
+ */
+uint32_t WasmModule::mapSharedFuncStateMemory(
+  const std::shared_ptr<faabric::state::FunctionState>& fs,
+  long offset,
+  uint32_t length)
+{
+    // See if we already have this segment mapped into memory
+    std::string segmentKey =
+      fs->user + "_" + fs->function + "_" + std::to_string(fs->parallelismId) +
+      "__" + std::to_string(offset) + "__" + std::to_string(length);
+    if (sharedMemWasmPtrs.count(segmentKey) == 0) {
+        // Lock and double check
+        faabric::util::FullLock lock(sharedMemWasmPtrsMutex);
+
+        if (sharedMemWasmPtrs.count(segmentKey) == 0) {
+            // Page-align the chunk
+            faabric::util::AlignedChunk chunk =
+              faabric::util::getPageAlignedChunk(offset, length);
+
+            // Create the wasm memory region and work out the offset to the
+            // start of the desired chunk in this region (this will be zero
+            // if the offset is already zero, or if the offset is
+            // page-aligned already). We need to round the allocation up to
+            // a wasm page boundary
+            uint32_t allocSize = roundUpToWasmPageAligned(chunk.nBytesLength);
+            uint32_t wasmBasePtr = this->growMemory(allocSize);
+            uint32_t wasmOffsetPtr = wasmBasePtr + chunk.offsetRemainder;
+
+            // Map the shared memory
+            uint8_t* wasmMemoryRegionPtr = wasmPointerToNative(wasmBasePtr);
+            fs->mapSharedMemory(static_cast<void*>(wasmMemoryRegionPtr),
                                 chunk.nPagesOffset,
                                 chunk.nPagesLength);
 
