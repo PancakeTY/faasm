@@ -9,6 +9,8 @@
 #include <wasm/WasmModule.h>
 #include <wasm/chaining.h>
 
+#define STREAM_BATCH -2
+
 namespace wasm {
 int awaitChainedCall(unsigned int messageId)
 {
@@ -38,10 +40,19 @@ int awaitChainedCall(unsigned int messageId)
 int makeChainedCall(const std::string& functionName,
                     int wasmFuncPtr,
                     const char* pyFuncName,
-                    const std::vector<uint8_t>& inputData)
+                    const std::vector<uint8_t>& inputData,
+                    int msgIdx)
 {
-    faabric::Message* originalCall =
-      &faabric::executor::ExecutorContext::get()->getMsg();
+    faabric::Message* originalCall;
+    if (faabric::executor::ExecutorContext::get()->getMsgIdx() ==
+        STREAM_BATCH) {
+        SPDLOG_TRACE("S - chained_call STREAM_BATCH");
+        originalCall =
+          &faabric::executor::ExecutorContext::get()->getBatch().mutable_messages()->at(
+            msgIdx);
+    } else {
+        originalCall = &faabric::executor::ExecutorContext::get()->getMsg();
+    }
 
     std::string user = originalCall->user();
 

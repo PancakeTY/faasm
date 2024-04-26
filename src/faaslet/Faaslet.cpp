@@ -25,6 +25,9 @@
 
 static thread_local bool threadIsIsolated = false;
 
+// Should be same with Executor.cpp
+#define STREAM_BATCH -2
+
 using namespace isolation;
 
 namespace faaslet {
@@ -108,6 +111,12 @@ int32_t Faaslet::executeTask(int threadPoolIdx,
         threadIsIsolated = true;
     }
 
+    if (msgIdx == STREAM_BATCH)
+    {
+        int32_t returnValue = module->executeBatchTask(threadPoolIdx, req);
+        return returnValue;
+    }
+    
     int32_t returnValue = module->executeTask(threadPoolIdx, msgIdx, req);
 
     return returnValue;

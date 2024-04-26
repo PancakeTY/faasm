@@ -11,6 +11,7 @@ add_subdirectory(upload)
 add_subdirectory(wamr)
 add_subdirectory(wasm)
 add_subdirectory(wavm)
+add_subdirectory(stream)
 
 # Add SGX tests if enabled
 if (NOT FAASM_SGX_MODE STREQUAL "Disabled")

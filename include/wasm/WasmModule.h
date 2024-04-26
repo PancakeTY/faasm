@@ -50,7 +50,12 @@ class WasmModule
                         int msgIdx,
                         std::shared_ptr<faabric::BatchExecuteRequest> req);
 
+    int32_t executeBatchTask(int threadPoolIdx,
+                                         std::shared_ptr<faabric::BatchExecuteRequest> req);
+
     virtual int32_t executeFunction(faabric::Message& msg);
+
+    virtual int32_t executeBatchFunction(faabric::BatchExecuteRequest& req);
 
     bool isBound();
 

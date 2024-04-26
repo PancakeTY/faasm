@@ -312,6 +312,44 @@ int32_t WAMRWasmModule::executeFunction(faabric::Message& msg)
     return returnValue;
 }
 
+int32_t WAMRWasmModule::executeBatchFunction(faabric::BatchExecuteRequest& req)
+{
+    SPDLOG_DEBUG("WAMR executing batch message with {}", req.appid());
+
+    // If we are calling this function, we know we are thread pool 0
+    int thisThreadPoolIdx = 0;
+
+    // Make sure context is set
+    WasmExecutionContext ctx(this);
+    int returnValue = 0;
+
+    if (req.messages(0).funcptr() > 0) {
+        SPDLOG_ERROR("Function pointers not supported in batch mode");
+        throw std::runtime_error("Function pointers not supported in batch mode");
+    } else {
+        // We use the first message to gain argc and argv. But it shouldn't be right. 
+        // We should limit the cmdline be empty and the Argc and Argv are empty.
+        prepareArgcArgv(req.messages(0));
+
+        // Run the main function
+        returnValue = executeWasmFunction(thisThreadPoolIdx, ENTRY_FUNC_NAME);
+
+        // When running the main function (_start in WASI) we want to overwrite
+        // the function's return value for the one in WAMR's WASI context.
+        // The former is just the return value of _start, whereas the latter
+        // is the actual return value of the entrypoint (e.g. main)
+        returnValue = wasm_runtime_get_wasi_ctx(moduleInstance)->exit_code;
+    }
+
+    // Record the return value. It is also recorded by the WasmModule::executeBatchTask.
+    for (int i = 0; i < req.messages_size(); i++) {
+        req.mutable_messages(i)->set_returnvalue(returnValue);
+    } 
+    
+
+    return returnValue;
+}
+
 AOTFuncType* getFuncTypeFromFuncPtr(WASMModuleCommon* wasmModule,
                                     WASMModuleInstanceCommon* moduleInstance,
                                     int32_t wasmFuncPtr)

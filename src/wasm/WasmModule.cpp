@@ -501,6 +501,70 @@ int32_t WasmModule::executeTask(
     return returnValue;
 }
 
+int32_t WasmModule::executeBatchTask(
+  int threadPoolIdx,
+  std::shared_ptr<faabric::BatchExecuteRequest> req)
+{
+    faabric::Message& firstMsg = req->mutable_messages()->at(0);
+    std::string funcStr = faabric::util::funcToString(firstMsg, true);
+
+    if (!isBound()) {
+        throw std::runtime_error(
+          "WasmModule must be bound before executing anything");
+    }
+
+    assert(boundUser == firstMsg.user());
+    assert(boundFunction == firstMsg.function());
+
+    // Set up context for this task
+    WasmExecutionContext ctx(this);
+
+    // Modules must have provisioned their own thread stacks
+    assert(!threadStacks.empty());
+ 
+    // Ignore stacks and guard pages in snapshot if present
+    if (!firstMsg.snapshotkey().empty()) {
+        ignoreThreadStacksInSnapshot(firstMsg.snapshotkey());
+    }
+
+    // Perform the appropriate type of execution
+    int returnValue;
+    long startTime = faabric::util::getGlobalClock().epochMillis();
+    for (int i = 0; i < req->messages_size(); i++) {
+        req->mutable_messages()->at(i).set_starttimestamp(startTime);
+    }
+       
+    SPDLOG_TRACE("Executing {} as batch standard function", funcStr);
+    returnValue = executeBatchFunction(*req);
+    
+    // Set result and timestamp
+    long endTime = faabric::util::getGlobalClock().epochMillis();
+    for (int i = 0; i < req->messages_size(); i++) {
+        req->mutable_messages(i)->set_finishtimestamp(endTime);
+        req->mutable_messages(i)->set_returnvalue(returnValue);
+        if (returnValue != 0){
+            req->mutable_messages(i)->set_outputdata(
+                fmt::format("Call failed (return value={})", returnValue));
+        }
+        
+    }
+
+    // Add captured stdout if necessary
+    conf::FaasmConfig& conf = conf::getFaasmConfig();
+    if (conf.captureStdout == "on") {
+        std::string moduleStdout = getCapturedStdout();
+        if (!moduleStdout.empty()) {
+            for (int i = 0; i < req->messages_size(); i++) {
+                std::string newOutput = moduleStdout + "\n" +  req->messages(i).outputdata();
+                req->mutable_messages(i)->set_outputdata(newOutput);
+            }
+            clearCapturedStdout();
+        }
+    }
+
+    return returnValue;
+}
+
 uint32_t WasmModule::createMemoryGuardRegion(uint32_t wasmOffset)
 {
 
@@ -933,6 +997,11 @@ uint8_t* WasmModule::getMemoryBase()
 int32_t WasmModule::executeFunction(faabric::Message& msg)
 {
     throw std::runtime_error("executeFunction not implemented");
+}
+
+int32_t WasmModule::executeBatchFunction(faabric::BatchExecuteRequest& req)
+{
+    throw std::runtime_error("executeBatchFunction not implemented");
 }
 
 int32_t WasmModule::executeOMPThread(int threadPoolIdx,

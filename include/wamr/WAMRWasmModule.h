@@ -57,6 +57,8 @@ class WAMRWasmModule final
 
     int32_t executeFunction(faabric::Message& msg) override;
 
+    int32_t executeBatchFunction(faabric::BatchExecuteRequest& req) override;
+
     // ----- Threads ------
     int32_t executeOMPThread(int threadPoolIdx,
                              uint32_t stackTop,

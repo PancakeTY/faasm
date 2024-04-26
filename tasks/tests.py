@@ -14,14 +14,15 @@ IS_CI = "HOST_TYPE" in environ and environ["HOST_TYPE"] == "ci"
 TEST_ENV = {
     "CGROUP_MODE": "off" if IS_CI else "on",
     "LD_LIBRARY_PATH": "/build/faasm/third-party/lib:/usr/local/lib",
-    "LOG_LEVEL": "info",
+    "LOG_LEVEL": "trace",
     "NETNS_MODE": "off",
     "PLANNER_HOST": "localhost",
     "PLANNER_PORT": "8080" if IS_CI else "8081",
     "REDIS_QUEUE_HOST": "redis-queue",
     "REDIS_STATE_HOST": "redis-state",
     "TERM": "xterm-256color",
-    "FAASM_WASM_VM": "wavm",
+    "FAASM_WASM_VM": "wamr",
+    "BATCH_PROCESS": "on",
     # Sanitiser env. variables
     "ASAN_OPTIONS": "halt_on_error=1:quarantine_size_mb=16",
     "LSAN_OPTIONS": "suppressions={}/leak-sanitizer-ignorelist.txt".format(

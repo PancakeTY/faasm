@@ -3,6 +3,7 @@
 #include <faabric/util/bytes.h>
 #include <faabric/util/logging.h>
 #include <faabric/util/macros.h>
+#include <faabric/util/serialization.h>
 #include <wamr/WAMRWasmModule.h>
 #include <wamr/native.h>
 #include <wasm/WasmExecutionContext.h>
@@ -13,6 +14,8 @@
 #include <wasm/migration.h>
 
 #include <wasm_export.h>
+
+#define STREAM_BATCH -2
 
 using namespace faabric::executor;
 
@@ -71,11 +74,12 @@ static int32_t __faasm_await_call_wrapper(wasm_exec_env_t exec_env,
 static int32_t __faasm_chain_name_wrapper(wasm_exec_env_t execEnv,
                                           const char* name,
                                           const uint8_t* input,
-                                          uint32_t inputSize)
+                                          uint32_t inputSize,
+                                          uint32_t msgIdx)
 {
     std::vector<uint8_t> _input(input, input + inputSize);
-    SPDLOG_DEBUG("S - chain_name - {}", std::string(name));
-    return wasm::makeChainedCall(std::string(name), 0, nullptr, _input);
+    SPDLOG_DEBUG("S - chain_name - {} : msgIdx {}", std::string(name), msgIdx);
+    return wasm::makeChainedCall(std::string(name), 0, nullptr, _input, msgIdx);
 }
 
 /**
@@ -152,6 +156,38 @@ static int32_t __faasm_read_input_wrapper(wasm_exec_env_t exec_env,
 {
     SPDLOG_DEBUG("S - faasm_read_input {} {}", inBuff, inLen);
 
+    // For stream batch processing. We concat all the input data for all the
+    // Msgs.
+    if (ExecutorContext::get()->getMsgIdx() == STREAM_BATCH) {
+        SPDLOG_TRACE("S - faasm_read_input STREAM_BATCH");
+        faabric::BatchExecuteRequest& req = ExecutorContext::get()->getBatch();
+        // Concat the input data for all the Msgs
+        std::map<std::string, std::map<std::string, std::string>> inputMap;
+        for (size_t i = 0; i < req.messages_size(); i++) {
+            // Get the input data from each Msg
+            std::string innerStr = req.messages(i).inputdata();
+            std::vector<uint8_t> innerBytes =
+              faabric::util::stringToBytes(innerStr);
+            size_t index = 0;
+            // Deserialize each input data
+            std::map<std::string, std::string> innerMap =
+              faabric::util::deserializeMap(innerBytes, index);
+            inputMap[std::to_string(i)] = innerMap;
+        }
+        std::vector<uint8_t> inputBytes;
+        faabric::util::serializeNestedMap(inputBytes, inputMap);
+        // If nothing, return nothing
+        if (inputBytes.empty()) {
+            return 0;
+        }
+        // Write to the wasm buffer
+        int inputSize = faabric::util::safeCopyToBuffer(
+          inputBytes, reinterpret_cast<uint8_t*>(inBuff), inLen);
+        SPDLOG_TRACE("S - faasm_read_input STREAM_BATCH inputSize {}",
+                     inputSize);
+        return inputSize;
+    }
+
     faabric::Message& call = ExecutorContext::get()->getMsg();
     std::vector<uint8_t> inputBytes =
       faabric::util::stringToBytes(call.inputdata());
@@ -195,6 +231,11 @@ static void __faasm_write_output_wrapper(wasm_exec_env_t exec_env,
 {
     SPDLOG_DEBUG("S - faasm_write_output {} {}", outBuff, outLen);
 
+    // For stream batch processing. We write output for specified Msg.
+    if (ExecutorContext::get()->getMsgIdx() == STREAM_BATCH) {
+        SPDLOG_DEBUG("S - faasm_write_output STREAM_BATCH");
+        return;
+    }
     faabric::Message& call = ExecutorContext::get()->getMsg();
     call.set_outputdata(outBuff, outLen);
 }
@@ -202,7 +243,7 @@ static void __faasm_write_output_wrapper(wasm_exec_env_t exec_env,
 static NativeSymbol ns[] = {
     REG_NATIVE_FUNC(__faasm_append_state, "(**i)"),
     REG_NATIVE_FUNC(__faasm_await_call, "(i)i"),
-    REG_NATIVE_FUNC(__faasm_chain_name, "($$i)i"),
+    REG_NATIVE_FUNC(__faasm_chain_name, "($$ii)i"),
     REG_NATIVE_FUNC(__faasm_chain_ptr, "(i$i)i"),
     REG_NATIVE_FUNC(__faasm_host_interface_test, "(i)"),
     REG_NATIVE_FUNC(__faasm_migrate_point, "(ii)"),
