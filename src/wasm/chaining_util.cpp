@@ -69,6 +69,7 @@ int makeChainedCall(const std::string& functionName,
     faabric::Message& msg = req->mutable_messages()->at(0);
     msg.set_inputdata(inputData.data(), inputData.size());
     msg.set_funcptr(wasmFuncPtr);
+    msg.set_chainedid(originalCall->chainedid());
 
     // Propagate the command line if needed
     msg.set_cmdline(originalCall->cmdline());
