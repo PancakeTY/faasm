@@ -15,4 +15,6 @@ int makeChainedCall(const std::string& functionName,
                     const char* pyFunc,
                     const std::vector<uint8_t>& inputData,
                     int msgIdx = 0);
+
+int makeChainedCallBatch();
 }

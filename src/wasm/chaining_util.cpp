@@ -122,6 +122,12 @@ int makeChainedCall(const std::string& functionName,
 
 int makeChainedCallBatch()
 {
+    // This function is only designed for the STREAM_BATCH mode
+    if (faabric::executor::ExecutorContext::get()->getMsgIdx() !=
+        STREAM_BATCH){
+        return 0;
+    }
+    SPDLOG_TRACE("S - chained_call_back_invoke");
     std::shared_ptr<faabric::executor::ExecutorContext> context =
       faabric::executor::ExecutorContext::get();
     std::vector<std::string> chainedFunctionName = context->chainedFunctionName;

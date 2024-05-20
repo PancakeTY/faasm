@@ -83,6 +83,16 @@ static int32_t __faasm_chain_name_wrapper(wasm_exec_env_t execEnv,
 }
 
 /**
+ *  Invoke staged chained functions
+ */
+static void __faasm_chain_invoke_wrapper(wasm_exec_env_t execEnv)
+{
+    SPDLOG_DEBUG("S - chain_name_invoke");
+    wasm::makeChainedCallBatch();
+    return;
+}
+
+/**
  * Chain a function by function pointer
  */
 static int32_t __faasm_chain_ptr_wrapper(wasm_exec_env_t exec_env,
@@ -244,6 +254,7 @@ static NativeSymbol ns[] = {
     REG_NATIVE_FUNC(__faasm_append_state, "(**i)"),
     REG_NATIVE_FUNC(__faasm_await_call, "(i)i"),
     REG_NATIVE_FUNC(__faasm_chain_name, "($$ii)i"),
+    REG_NATIVE_FUNC(__faasm_chain_invoke, "()"),
     REG_NATIVE_FUNC(__faasm_chain_ptr, "(i$i)i"),
     REG_NATIVE_FUNC(__faasm_host_interface_test, "(i)"),
     REG_NATIVE_FUNC(__faasm_migrate_point, "(ii)"),

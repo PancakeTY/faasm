@@ -1,9 +1,9 @@
 [submodule "faabric"]
 	path = faabric
-	url = https://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@github.com/PancakeTY/faabric.git
+	url = https://github.com/PancakeTY/faabric.git
 [submodule "clients/python"]
 	path = clients/python
 	url = https://github.com/faasm/python.git
 [submodule "clients/cpp"]
 	path = clients/cpp
-	url = https://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@github.com/PancakeTY/cpp.git
+	url = https://github.com/PancakeTY/cpp.git
