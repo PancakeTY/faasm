@@ -8,7 +8,7 @@ services:
     image: faasm.azurecr.io/redis:${FAASM_VERSION}
 
   planner:
-    image: ${FAABRIC_PLANNER_IMAGE}
+    image: tqiunimelb/planner-stream:0.0.2
     # Pass the build dir as argument to the entrypoint, so that the binaries
     # are correctly mounted. In general we prefer to use the binaries built
     # by faasm (in FAASM_BUILD_MOUNT) but occasionally, e.g. when deploying
@@ -72,7 +72,7 @@ services:
 
   # Distributed worker, used for executing as a local cluster
   worker:
-    image: ${FAASM_WORKER_IMAGE}
+    image: tqiunimelb/worker-stream:0.0.1
     depends_on:
       - planner
       - upload

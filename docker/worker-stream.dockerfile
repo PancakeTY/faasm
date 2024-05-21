@@ -1,5 +1,4 @@
 ARG FAASM_VERSION
-ARG FAASM_SGX_PARENT_SUFFIX
 FROM tqiunimelb/base-stream:0.0.2
 
 # Build the worker binary
@@ -7,7 +6,7 @@ ARG FAASM_SGX_MODE
 RUN cd /usr/local/code/faasm \
     && ./bin/create_venv.sh \
     && source venv/bin/activate \
-    && inv dev.cmake --build Release --sgx ${FAASM_SGX_MODE} \
+    && inv dev.cmake --build Release --sgx Disabled\
     && inv dev.cc codegen_shared_obj \
     && inv dev.cc codegen_func \
     && inv dev.cc pool_runner

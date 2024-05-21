@@ -17,6 +17,10 @@ REMOTE_COMMIT=$(git rev-parse origin/state)
 if [ "$LOCAL_COMMIT" != "$REMOTE_COMMIT" ]; then
     echo "New changes detected. Updating the repository and rebuilding the pool_runner..."
     git pull origin state
+    
+    echo "Updating submodules..."
+    git submodule update --init --recursive
+
     source venv/bin/activate
     inv dev.cc pool_runner
 else
