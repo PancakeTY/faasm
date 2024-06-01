@@ -220,7 +220,8 @@ int makeChainedCallBatch()
     // call all the requests in reqsMap
     for (auto& [functionName, reqs] : reqsMap) {
         for (auto& [appId, req] : reqs) {
-            plannerCli.callFunctions(req);
+            plannerCli.enqueueFunctions(req);
+            // plannerCli.callFunctions(req);
         }
     }
     // clear the context
