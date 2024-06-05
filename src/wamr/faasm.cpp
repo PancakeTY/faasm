@@ -78,7 +78,7 @@ static int32_t __faasm_chain_name_wrapper(wasm_exec_env_t execEnv,
                                           uint32_t msgIdx)
 {
     std::vector<uint8_t> _input(input, input + inputSize);
-    SPDLOG_DEBUG("S - chain_name - {} : msgIdx {}", std::string(name), msgIdx);
+    SPDLOG_TRACE("S - chain_name - {} : msgIdx {}", std::string(name), msgIdx);
     return wasm::makeChainedCall(std::string(name), 0, nullptr, _input, msgIdx);
 }
 

@@ -124,7 +124,7 @@ int makeChainedCallBatch()
 {
     // This function is only designed for the STREAM_BATCH mode
     if (faabric::executor::ExecutorContext::get()->getMsgIdx() !=
-        STREAM_BATCH){
+        STREAM_BATCH) {
         return 0;
     }
     SPDLOG_TRACE("S - chained_call_back_invoke");
@@ -151,7 +151,10 @@ int makeChainedCallBatch()
 
         // Get the original call
         faabric::Message* originalCall =
-          &faabric::executor::ExecutorContext::get()->getBatch().mutable_messages()->at(msgIdx);
+          &faabric::executor::ExecutorContext::get()
+             ->getBatch()
+             .mutable_messages()
+             ->at(msgIdx);
         std::string user = originalCall->user();
         int appId = originalCall->appid();
 
@@ -178,7 +181,7 @@ int makeChainedCallBatch()
             msgPtr = &req->mutable_messages()->at(0);
         }
 
-        faabric::Message &msg = *msgPtr;
+        faabric::Message& msg = *msgPtr;
         // Propagate chaining-specific fields
         msg.set_inputdata(inputData.data(), inputData.size());
         msg.set_funcptr(0);
@@ -197,13 +200,13 @@ int makeChainedCallBatch()
             msg.set_recordexecgraph(true);
         }
 
-        SPDLOG_INFO("Chaining call {}/{} -> {}/{} (ids: {} -> {})",
-                    originalCall->user(),
-                    originalCall->function(),
-                    msg.user(),
-                    msg.function(),
-                    originalCall->id(),
-                    msg.id());
+        SPDLOG_TRACE("Chaining call {}/{} -> {}/{} (ids: {} -> {})",
+                     originalCall->user(),
+                     originalCall->function(),
+                     msg.user(),
+                     msg.function(),
+                     originalCall->id(),
+                     msg.id());
 
         // Record the chained call in the executor before invoking the new
         // functions to avoid data races
@@ -220,6 +223,11 @@ int makeChainedCallBatch()
     // call all the requests in reqsMap
     for (auto& [functionName, reqs] : reqsMap) {
         for (auto& [appId, req] : reqs) {
+            SPDLOG_DEBUG("Chaining call batch for function: {}, appid: {}, "
+                         "message size: {}",
+                         functionName,
+                         appId,
+                         req->messages_size());
             plannerCli.enqueueFunctions(req);
             // plannerCli.callFunctions(req);
         }
