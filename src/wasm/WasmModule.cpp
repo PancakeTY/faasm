@@ -530,8 +530,10 @@ int32_t WasmModule::executeBatchTask(
     // Perform the appropriate type of execution
     int returnValue;
     long startTime = faabric::util::getGlobalClock().epochMillis();
+    auto startMicros = faabric::util::getGlobalClock().epochMicros();
     for (int i = 0; i < req->messages_size(); i++) {
         req->mutable_messages()->at(i).set_starttimestamp(startTime);
+        req->mutable_messages()->at(i).set_workerexecutestart(startMicros);
     }
        
     SPDLOG_TRACE("Executing {} as batch standard function", funcStr);
@@ -539,8 +541,10 @@ int32_t WasmModule::executeBatchTask(
     
     // Set result and timestamp
     long endTime = faabric::util::getGlobalClock().epochMillis();
+    auto endMicros = faabric::util::getGlobalClock().epochMicros();
     for (int i = 0; i < req->messages_size(); i++) {
         req->mutable_messages(i)->set_finishtimestamp(endTime);
+        req->mutable_messages(i)->set_workerexecuteend(endMicros);
         req->mutable_messages(i)->set_returnvalue(returnValue);
         if (returnValue != 0){
             req->mutable_messages(i)->set_outputdata(

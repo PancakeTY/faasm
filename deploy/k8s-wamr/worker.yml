@@ -11,7 +11,7 @@ spec:
   selector:
     matchLabels:
       run: faasm-worker
-  replicas: 2
+  replicas: 3
   template:
     metadata:
       labels:
